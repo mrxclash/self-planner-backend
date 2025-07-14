@@ -8,6 +8,21 @@ router.get("/health", (req, res) => {
 	res.status(200).json({ status: "OK", message: "Server is up and running" });
 });
 
+// Login Route
+router.post("/login", async (req, res) => {
+	const { email, password } = req.body;
+
+	try {
+		const user = await User.findOne({ email, password });
+		if (!user) {
+			return res.status(404).json({ message: "User not found" });
+		}
+		res.status(200).json(user);
+	} catch (err) {
+		res.status(500).json({ message: "Login failed", error: err.message });
+	}
+});
+
 // Save data from frontend
 router.post("/sync", async (req, res) => {
 	const { user, planner } = req.body;
