@@ -3,6 +3,11 @@ const router = express.Router();
 const User = require("../models/User");
 const Planner = require("../models/Planner");
 
+// Health Check Route
+router.get("/health", (req, res) => {
+	res.status(200).json({ status: "OK", message: "Server is up and running" });
+});
+
 // Save data from frontend
 router.post("/sync", async (req, res) => {
 	const { user, planner } = req.body;
