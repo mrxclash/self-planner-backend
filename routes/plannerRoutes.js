@@ -24,19 +24,47 @@ router.post("/login", async (req, res) => {
 });
 
 // Save data from frontend
+// Save data from frontend (merge planner)
 router.post("/sync", async (req, res) => {
-	const { user, planner } = req.body;
+	const { user, planner: incomingPlanner } = req.body;
 
 	try {
 		// Upsert User
 		await User.findOneAndUpdate({ id: user.id }, user, { upsert: true });
 
-		// Upsert Planner
-		await Planner.findOneAndUpdate({ userId: user.id }, { userId: user.id, planner }, { upsert: true });
+		// Fetch existing planner
+		let existing = await Planner.findOne({ userId: user.id });
 
-		res.status(200).json({ message: "Data synced successfully" });
+		// Merge planners
+		const mergedPlanner = { ...(existing?.planner || {}) };
+
+		for (const date in incomingPlanner) {
+			if (!mergedPlanner[date]) {
+				// No data for this date — use incoming
+				mergedPlanner[date] = incomingPlanner[date];
+			} else {
+				// Merge tasks for this date
+				const existingTasks = mergedPlanner[date].tasks || {};
+				const newTasks = incomingPlanner[date].tasks || {};
+
+				mergedPlanner[date].tasks = {
+					...existingTasks,
+					...newTasks,
+				};
+			}
+		}
+
+		// Save merged planner
+		await Planner.findOneAndUpdate(
+			{ userId: user.id },
+			{ userId: user.id, planner: mergedPlanner },
+			{ upsert: true }
+		);
+
+		res.status(200).json({ message: "Planner synced with merge." });
 	} catch (error) {
-		res.status(500).json({ message: "Error syncing data", error });
+		console.error("Sync Error:", error);
+		res.status(500).json({ message: "Error syncing planner", error });
 	}
 });
 
